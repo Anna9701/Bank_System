@@ -28,10 +28,16 @@ class NoUserFindException extends Exception {
 	}
 };
 
+class NoResourcesException extends Exception {
+	NoResourcesException() {
+		
+	}
+}
+
 class BankSystem implements Serializable {
 	private Vector<User> users;
-	String filename;
-	transient Scanner in = new Scanner (System.in);
+	private String filename;
+	private transient Scanner in = new Scanner (System.in);
 
 	BankSystem() {
 		System.out.println("Please enter name for database: ");
@@ -70,44 +76,96 @@ class BankSystem implements Serializable {
 	void menu() {
 		int choise;
 		
-		do{		
+		do{	
 			choise = chooseMenu();
 			switch(choise) {
-			case 0:
-				System.exit(0);
-			case 1:
-				addUser();
-				break;
-			case 2:
-				User todelete = enterUserNumber("delete");
-				deleteUser(todelete);
-				break;
-			case 3:
-				User topay = enterUserNumber("payment");
-				payIn(topay);
-				break;
-			case 4:
-				User totake = enterUserNumber("pay out");
-				payOut(totake);
-				break;
-			case 5:
-				transferMoney();
-				break;
-			case 6:
-				displayAll();
-				break;
-			case 7:
-				displaySpecific();
-				break;
-			case 8:
-				saveState();
-				break;
-			}
+				case 0:
+					if(confirm("exit")) {
+						System.exit(0);
+					} else {
+						break;
+					}
+				case 1:
+					addUser();
+					break;
+				case 2:
+					User todelete;
+					try {
+						todelete = enterUserNumber("delete");
+						if(confirm("delete", todelete)) {
+							deleteUser(todelete);
+						}
+					} catch (NoUserFindException e1) {
+						System.out.println("No such user find!");
+					}
+					break;
+				case 3:
+					User topay;
+					try {
+						topay = enterUserNumber("payment");
+						if(confirm("payment", topay)) {
+							payIn(topay);
+						}
+					} catch (NoUserFindException e1) {
+						System.out.println("No such user find!");
+					}
+					break;
+				case 4:
+					User totake;
+					try {
+						totake = enterUserNumber("pay out");
+						if(confirm("payout", totake)) {
+							try {
+								payOut(totake);
+							} catch (NoResourcesException e) {
+								System.out.println("There is no resources to do this!");
+							}
+						}
+					} catch (NoUserFindException e1) {
+						System.out.println("No such user find!");
+					}
+					break;
+				case 5:
+					transferMoney();
+					break;
+				case 6:
+					displayAll();
+					break;
+				case 7:
+					displaySpecific();
+					break;
+				case 8:
+					if(confirm("save state")) {
+						saveState();
+					}
+					break;
+				}
 			System.out.println();
+			
 		} while (true);
 	}
 	
-	void menuDisplayOption() { 
+	private boolean confirm (String text) {
+		System.out.println("Do you want to confirm " + text + "?");	
+		return confirmPress();
+	}
+	
+	private boolean confirmPress() {
+		System.out.println("Press Y to confirm. Other keys will abort");
+		char choise = Character.toUpperCase(in.next().charAt(0));
+		if(choise == 'Y') {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	private boolean confirm (String text, User u) {
+		System.out.println("Do you want to confirm " + text + ":");
+		u.display();
+		return confirmPress();
+	}
+	
+	private void menuDisplayOption() { 
 		System.out.println("Welcome in our bank system. What would you like to do?");
 		System.out.println("1. Add user");
 		System.out.println("2. Delete user");
@@ -120,7 +178,7 @@ class BankSystem implements Serializable {
 		System.out.println("0. Quit");
 	}
 	
-	int chooseMenu () {
+	private int chooseMenu () {
 		int choise = 0;
 		
 		do {
@@ -140,7 +198,7 @@ class BankSystem implements Serializable {
 		System.out.println("Enter last name: ");
 		String lname = in.nextLine();
 		System.out.println("Enter PESEL:");
-		int pesel = in.nextInt();
+		long pesel = in.nextLong();
 		in.nextLine();
 		System.out.println("Enter adress:");
 		String adress = in.nextLine();
@@ -150,35 +208,99 @@ class BankSystem implements Serializable {
 		addUser(sNo, fname, lname, pesel, adress, money);
 	}
 
-	void addUser (int sNo, String fname, String lname, int p, String adr, double money){
-		users.addElement(new User(sNo, fname, lname, p, adr, money));
+	void addUser (int sNo, String fname, String lname, long p, String adr, double money){
+		User add = new User(sNo, fname, lname, p, adr, money);
+		if(confirm("add", add)) {
+			users.addElement(add);
+		}
 	}
 	
-	private User enterUserNumber (String text) {
+	private User enterUserNumber (String text) throws NoUserFindException {
 		System.out.println("Enter system number of user to " + text);
 		int number = in.nextInt();
 		try {
 			User tmp = this.findByNumber(number);
 			return tmp;
 		} catch (NoUserFindException e) {
-			e.printStackTrace();
+			throw e;
 		}
-		return null;
 	}
+	
 	void payIn(User topay) {
 		System.out.println("Enter amount of money to pay in: ");
 		double moneytopay = in.nextDouble();
-		topay.account.payment(moneytopay);
+		if(moneytopay <= 0) {
+			System.out.println("You cannot pay in less than 0!");
+			return;
+		}
+		if(confirm("amount " + Double.toString(moneytopay))) {
+			topay.account.payment(moneytopay);
+		}
 	}
 	
-	void payOut(User topayout) {
-		System.out.println("Enter amount of money to pay out: ");
+	private void payIn(User topay, double money) {
+		topay.account.payment(money);
+	}
+	
+	void payOut(User topayout) throws NoResourcesException {
+		System.out.println("Enter amount of money: ");
 		double moneytopayout = in.nextDouble();
-		topayout.account.payout(moneytopayout);
+		if(moneytopayout <= 0) {
+			System.out.println("You cannot take less than 0!");
+			return;
+		}
+		if(confirm("amount " + Double.toString(moneytopayout))) {
+			try {
+				topayout.account.payout(moneytopayout);
+			} catch (NoResourcesException e) {
+				throw e;
+			}
+		}
+	}
+	
+	private double payOutTransfer(User topayout) throws NoResourcesException {
+		final int smtwentwrong = -1;
+		System.out.println("Enter amount of money: ");
+		double moneytopayout = in.nextDouble();
+		if(moneytopayout <= 0) {
+			System.out.println("You cannot take less than 0!");
+			return smtwentwrong;
+		}
+		if(confirm("amount " + Double.toString(moneytopayout))) {
+			try {
+				topayout.account.payout(moneytopayout);
+			} catch (NoResourcesException e) {
+				throw e;
+			}
+		} else {
+			moneytopayout = smtwentwrong;
+		}
+		
+		return moneytopayout;
 	}
 	
 	void transferMoney() {
-		
+		User user1, user2;
+		try {
+			user1 = enterUserNumber ("pay in");
+			user2 = enterUserNumber ("take from");
+		} catch (NoUserFindException e) {
+			System.out.println("No such user find.");
+			return;
+		}
+		try {
+			if(confirm("take from", user2) && confirm("pay in", user1)) {
+				double money = payOutTransfer(user2);
+				if(money <= 0) {
+					return;
+				}
+				payIn(user1, money);
+			} else {
+				return;
+			}
+		} catch (NoResourcesException e) {
+			System.out.println("No resources to do this!");
+		}
 	}
 	
 	void deleteUser(User todelete) {
@@ -187,7 +309,7 @@ class BankSystem implements Serializable {
 	
 	void displayAll () {
 		System.out.println();
-		System.out.println("No.\t FName\t\t LName\t\t PESEL\t Adress\t\t Money");
+		//System.out.println("No.\t FName\t\t LName\t\t PESEL\t Adress\t\t Money");
 	    Iterator<User> it = users.iterator();
 		while(it.hasNext()) {
 				it.next().display();
@@ -209,7 +331,7 @@ class BankSystem implements Serializable {
 	}
 	
 	
-	void findDisplay () {
+	private void findDisplay () {
 		System.out.println("Do you want search by: ");
 		System.out.println("1. Users number in system");
 		System.out.println("2. Name");
@@ -219,7 +341,7 @@ class BankSystem implements Serializable {
 		System.out.println("0. Exit");
 	}
 	
-	int chooseFind () {
+	private int chooseFind () {
 		int choise;
 		do {
 			findDisplay();
@@ -230,7 +352,7 @@ class BankSystem implements Serializable {
 		
 	}
 	
-	Vector<User> find () throws NoUserFindException {
+	private Vector<User> find () throws NoUserFindException {
 		int choise = chooseFind();
 		Vector<User> usersfinded = new Vector<User> ();
 		User user = null;
@@ -403,7 +525,7 @@ class BankSystem implements Serializable {
 		User user;		
 		
 		System.out.println("Enter PESEL number: ");
-		int numbertofind = in.nextInt();
+		long numbertofind = in.nextLong();
 		
 		try {
 			user = findByPesel(numbertofind);
@@ -414,7 +536,7 @@ class BankSystem implements Serializable {
 		return user;
 	}
 	
-	private User findByPesel(int number) throws NoUserFindException {
+	private User findByPesel(long number) throws NoUserFindException {
 		Iterator<User> it = users.iterator();
 		while(it.hasNext()) {
 			User searched = it.next();
@@ -429,11 +551,10 @@ class BankSystem implements Serializable {
 
 class Account implements Serializable {
 	private double resources;
-	//private int userSystemNumber;
+
 	
 	Account(double money) {
 		resources = money;
-	//	userSystemNumber = userSysNo;
 	}
 	
 	double getResources () {
@@ -444,11 +565,11 @@ class Account implements Serializable {
 		resources += money;
 	}
 	
-	void payout (double money) {
+	void payout (double money) throws NoResourcesException {
 		if (money <= resources) {
 			resources -= money;
 		} else {
-			System.out.println("There is no resources to do this!");
+			throw new NoResourcesException();
 		}
 	}
 	
@@ -460,34 +581,32 @@ class User implements Serializable {
 	private int systemNumber;
 	private String firstname;
 	private String lastname;
-	private int pesel;
+	private long pesel;
 	private String adress;
 	Account account;
 	
-	//private double resources;
 	
-	
-	User(int sNo, String fname, String lname, int p, String adr, double money){
+	User(int sNo, String fname, String lname, long p, String adr, double money){
 			systemNumber = sNo;
 			firstname = fname;
 			lastname = lname;
 			pesel = p;
 			adress = adr;
 			account = new Account (money);
-			//resources = account.getResources();
+
 	}
 	
 	void display () {
 		System.out.println(systemNumber + "\t" + firstname + "\t" + lastname + "\t" + pesel + "\t" + adress + "\t" + account.getResources());
 	}
 	
-	static boolean compareUsers (User a, User b){
+	/*(static boolean compareUsers (User a, User b){
 		if( a.systemNumber == b.systemNumber) {
 			return true;
 		} else {
 			return false;
 		}
-	}
+	}*/
 	
 	int getNumber() {
 		return systemNumber;
@@ -501,7 +620,7 @@ class User implements Serializable {
 		return lastname;
 	}
 	
-	int getPesel () {
+	long getPesel () {
 		return pesel;
 	}
 	
