@@ -73,6 +73,8 @@ class BankSystem implements Serializable {
 		}
 	}
 	
+
+	
 	void menu() {
 		int choise;
 		
@@ -200,6 +202,11 @@ class BankSystem implements Serializable {
 		System.out.println("Enter PESEL:");
 		long pesel = in.nextLong();
 		in.nextLine();
+		while((int)(Math.log10(pesel)+1) != 11) {
+			System.out.println("Wrong pesel");
+					pesel = in.nextLong();
+					in.nextLine();
+		}
 		System.out.println("Enter adress:");
 		String adress = in.nextLine();
 		System.out.println("Enter amount of money: ");
@@ -600,13 +607,6 @@ class User implements Serializable {
 		System.out.println(systemNumber + "\t" + firstname + "\t" + lastname + "\t" + pesel + "\t" + adress + "\t" + account.getResources());
 	}
 	
-	/*(static boolean compareUsers (User a, User b){
-		if( a.systemNumber == b.systemNumber) {
-			return true;
-		} else {
-			return false;
-		}
-	}*/
 	
 	int getNumber() {
 		return systemNumber;
