@@ -73,7 +73,45 @@ class BankSystem implements Serializable {
 		}
 	}
 	
-
+	void deleteUser() {
+		User todelete;
+		try {
+			todelete = enterUserNumber("delete");
+			if(confirm("delete", todelete)) {
+				deleteUser(todelete);
+			}
+		} catch (NoUserFindException e1) {
+			System.out.println("No such user find!");
+		}
+	}
+	
+	void toPay() {
+		User topay;
+		try {
+			topay = enterUserNumber("payment");
+			if(confirm("payment", topay)) {
+				payIn(topay);
+			}
+		} catch (NoUserFindException e1) {
+			System.out.println("No such user find!");
+		}
+	}
+	
+	void toTake() {
+		User totake;
+		try {
+			totake = enterUserNumber("pay out");
+			if(confirm("payout", totake)) {
+				try {
+					payOut(totake);
+				} catch (NoResourcesException e) {
+					System.out.println("There is no resources to do this!");
+				}
+			}
+		} catch (NoUserFindException e1) {
+			System.out.println("No such user find!");
+		}
+	}
 	
 	void menu() {
 		int choise;
@@ -91,41 +129,13 @@ class BankSystem implements Serializable {
 					addUser();
 					break;
 				case 2:
-					User todelete;
-					try {
-						todelete = enterUserNumber("delete");
-						if(confirm("delete", todelete)) {
-							deleteUser(todelete);
-						}
-					} catch (NoUserFindException e1) {
-						System.out.println("No such user find!");
-					}
+					deleteUser();
 					break;
 				case 3:
-					User topay;
-					try {
-						topay = enterUserNumber("payment");
-						if(confirm("payment", topay)) {
-							payIn(topay);
-						}
-					} catch (NoUserFindException e1) {
-						System.out.println("No such user find!");
-					}
+					toPay();
 					break;
 				case 4:
-					User totake;
-					try {
-						totake = enterUserNumber("pay out");
-						if(confirm("payout", totake)) {
-							try {
-								payOut(totake);
-							} catch (NoResourcesException e) {
-								System.out.println("There is no resources to do this!");
-							}
-						}
-					} catch (NoUserFindException e1) {
-						System.out.println("No such user find!");
-					}
+					toTake();
 					break;
 				case 5:
 					transferMoney();
@@ -288,15 +298,16 @@ class BankSystem implements Serializable {
 	
 	void transferMoney() {
 		User user1, user2;
+		String txt1 = "pay in", txt2 = "take from";
 		try {
-			user1 = enterUserNumber ("pay in");
-			user2 = enterUserNumber ("take from");
+			user1 = enterUserNumber (txt1);
+			user2 = enterUserNumber (txt2);
 		} catch (NoUserFindException e) {
 			System.out.println("No such user find.");
 			return;
 		}
 		try {
-			if(confirm("take from", user2) && confirm("pay in", user1)) {
+			if(confirm(txt2, user2) && confirm(txt1, user1)) {
 				double money = payOutTransfer(user2);
 				if(money <= 0) {
 					return;
